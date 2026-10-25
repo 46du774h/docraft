@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Docraft",
+  "version": "1.0.0",
+  "description": "Turn pasted AI responses into polished Word, PDF or Markdown documents. Everything happens locally.",
+  "action": {
+    "default_title": "Docraft",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": ["storage"],
+  "optional_permissions": ["clipboardRead"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; base-uri 'none'; form-action 'none'; connect-src 'self'"
+  }
+}
