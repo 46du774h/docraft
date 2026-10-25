@@ -23,6 +23,8 @@
   .editor { @apply block h-full w-full resize-none rounded-xl border border-ink-200 bg-ink-100 p-3 font-mono text-[12.5px] leading-relaxed text-ink-800 shadow-sm placeholder:text-ink-400 hover:border-ink-300 focus:border-brand-500; }
   .popup-shell { background: radial-gradient(circle at 100% 0%, rgba(47,95,208,.12), transparent 34%), #111827; }
   .popup-actionbar, .popup-exports { box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 4px 12px rgba(0,0,0,.12); }
+  .popup-title { box-shadow: inset 0 1px 0 rgba(255,255,255,.03); }
+  .popup-title:focus-within { border-color: theme('colors.brand.500'); box-shadow: 0 0 0 2px rgba(47,95,208,.18); }
   .popup-editor { position: relative; }
   .popup-editor::before { content: ''; position: absolute; inset: 0; pointer-events: none; border: 1px solid rgba(148,163,184,.08); border-radius: .75rem; }
   .popup-footer .btn-icon { height: 30px; flex: 1; border-color: #4b5563; background: #1f2937; color: #e5e7eb; }

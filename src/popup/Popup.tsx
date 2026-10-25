@@ -43,6 +43,18 @@ export function Popup() {
         <Toolbar compact onPaste={paste} onClear={c.requestClear} confirmClear={c.confirmClear} chars={chars} words={words} hasText={hasText} />
       </div>
 
+      <label className="popup-title flex items-center gap-2 rounded-xl border border-ink-200 bg-ink-100/80 px-2.5 py-1.5" htmlFor="popup-doc-title">
+        <span className="shrink-0 text-[10px] font-medium uppercase tracking-[0.08em] text-ink-500">Title</span>
+        <input
+          id="popup-doc-title"
+          className="min-w-0 flex-1 border-0 bg-transparent text-[12px] text-ink-800 outline-none placeholder:text-ink-400"
+          value={c.settings.title}
+          maxLength={200}
+          placeholder="document title"
+          onChange={(e) => c.update({ title: e.target.value })}
+        />
+      </label>
+
       <div className="popup-editor min-h-0 flex-1">
         <InputEditor
           ref={editor}
