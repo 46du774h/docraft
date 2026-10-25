@@ -18,9 +18,28 @@ Docraft is a local-first Chrome extension that converts pasted AI responses into
 
 No server, account, AI API, analytics, or content scripts are required.
 
+## Preview
+
+### Compact popup
+
+The popup is optimized for quick workflows: enter an optional document title, paste your response, then use the icon buttons to export or open the full workspace.
+
+<div align="center">
+  <img src="./public/screenshots/popup.png" alt="Docraft compact popup with title field and export buttons" width="360" />
+</div>
+
+### Full workspace
+
+The workspace provides a larger editor, live document preview, export controls, and document settings including font, page layout, appearance, title, and page numbers.
+
+<div align="center">
+  <img src="./public/screenshots/workspace.png" alt="Docraft full workspace with editor, preview, and document settings" width="900" />
+</div>
+
 ## Features
 
 - **Fast compact popup** — paste and export from a small, icon-focused interface.
+- **Popup title field** — set the document title before exporting without opening the workspace.
 - **Full workspace** — edit content, inspect a live preview, and configure document settings.
 - **Multiple formats** — export to Word, PDF, or Markdown.
 - **Markdown-aware parsing** — detects headings, paragraphs, lists, tables, code blocks, quotes, links, and inline formatting.
