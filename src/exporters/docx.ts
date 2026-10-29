@@ -61,15 +61,11 @@ export async function buildDocx(doc: ParsedDocument, s: Settings): Promise<Uint8
   };
 
   const children: (Paragraph | Table)[] = [];
-  if (s.title.trim()) {
-    children.push(
-      new Paragraph({
-        heading: HeadingLevel.TITLE,
-        children: [new TextRun({ text: s.title.trim() })],
-      }),
-    );
+
+  // The filename is metadata, not document content.
+  for (const b of doc.blocks) {
+    children.push(...renderBlock(b, ctx, 0, 0));
   }
-  for (const b of doc.blocks) children.push(...renderBlock(b, ctx, 0, 0));
   if (children.length === 0) children.push(new Paragraph({ children: [] }));
 
   const headingStyle = (i: number) => {
