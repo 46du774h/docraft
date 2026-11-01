@@ -141,6 +141,16 @@ describe('parser — tables', () => {
 });
 
 describe('parser — robustness', () => {
+  it('normalizes doubled backslashes in copied LaTeX delimiters and commands', () => {
+    const d = parse(String.raw`1. \\(\int x^n\\,dx\\)`);
+    const list = d.blocks[0] as ListBlock;
+    expect(list.items[0].runs[0]).toMatchObject({
+      text: '\\int x^n\\,dx',
+      math: true,
+      displayMath: false,
+    });
+  });
+
   it('11. unicode and non-English text survive', () => {
     const s = '# Привет мир\n\nمرحبا بالعالم — 你好，世界 😀 ñ ü';
     const d = parse(s);

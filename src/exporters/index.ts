@@ -26,7 +26,13 @@ export function isEmptyDoc(doc: ParsedDocument): boolean {
   return doc.source.trim() === '' || doc.blocks.length === 0;
 }
 
-/** Generates the file in memory. Each format is generated independently of the others. */
+/**
+ * Generates the requested file in memory.
+ *
+ * The configured title is used to create the output filename.
+ * It is not automatically added to the document body.
+ * Each export format is generated independently.
+ */
 export async function generate(
   format: ExportFormat,
   doc: ParsedDocument,
@@ -34,27 +40,62 @@ export async function generate(
   loadFont?: FontLoader,
   now = new Date(),
 ): Promise<ExportResult> {
-  if (isEmptyDoc(doc)) throw new ExportError('Nothing to export. Paste a response into the editor first.');
+  if (isEmptyDoc(doc)) {
+    throw new ExportError(
+      'Nothing to export. Paste a response into the editor first.',
+    );
+  }
+
+  // The title controls the output filename, not the document content.
   const title = settings.title.trim() || doc.title;
   const filename = buildFilename(title, format, now);
   const notes: string[] = [];
 
   if (format === 'docx') {
     const { buildDocx } = await import('./docx');
-    return { format, filename, data: await buildDocx(doc, settings), mime: MIME.docx, notes };
+
+    return {
+      format,
+      filename,
+      data: await buildDocx(doc, settings),
+      mime: MIME.docx,
+      notes,
+    };
   }
+
   if (format === 'pdf') {
     const { buildPdf } = await import('./pdf');
-    const font = loadFont ?? (await import('./fontLoader')).extensionFontLoader;
+    const font =
+      loadFont ?? (await import('./fontLoader')).extensionFontLoader;
+
     const res = await buildPdf(doc, settings, font);
-    if (res.unsupportedChars.length) {
+
+    if (res.unsupportedChars.length > 0) {
       const sample = res.unsupportedChars.slice(0, 6).join(' ');
+
       notes.push(
-        `${res.unsupportedChars.length} character${res.unsupportedChars.length === 1 ? '' : 's'} (${sample}) can't be drawn with the PDF fonts and may appear blank. Word and Markdown keep them.`,
+        `${res.unsupportedChars.length} character${
+          res.unsupportedChars.length === 1 ? '' : 's'
+        } (${sample}) can't be drawn with the PDF fonts and may appear blank. Word and Markdown keep them.`,
       );
     }
-    return { format, filename, data: res.data, mime: MIME.pdf, notes };
+
+    return {
+      format,
+      filename,
+      data: res.data,
+      mime: MIME.pdf,
+      notes,
+    };
   }
+
   const { buildMarkdown } = await import('./markdown');
-  return { format, filename, data: new TextEncoder().encode(buildMarkdown(doc, settings)), mime: MIME.md, notes };
+
+  return {
+    format,
+    filename,
+    data: new TextEncoder().encode(buildMarkdown(doc, settings)),
+    mime: MIME.md,
+    notes,
+  };
 }

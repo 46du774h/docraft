@@ -1,3 +1,4 @@
+
 /** Structured document model produced by the parser. Exporters and the preview consume only this. */
 
 export interface Run {
@@ -10,6 +11,10 @@ export interface Run {
   href?: string;
   /** Line break (text is ignored). */
   br?: boolean;
+  /** Raw LaTeX expression to be typeset by the math renderer. */
+  math?: boolean;
+  /** Render the expression as a centered display equation. */
+  displayMath?: boolean;
 }
 
 export type Align = 'left' | 'center' | 'right' | null;
@@ -28,17 +33,20 @@ export interface HeadingBlock {
   level: 1 | 2 | 3 | 4 | 5 | 6;
   runs: Run[];
 }
+
 export interface ParagraphBlock {
   type: 'paragraph';
   runs: Run[];
   qa?: 'question' | 'answer';
 }
+
 export interface ListBlock {
   type: 'list';
   ordered: boolean;
   start: number;
   items: ListItem[];
 }
+
 export interface TableBlock {
   type: 'table';
   align: Align[];
@@ -46,15 +54,18 @@ export interface TableBlock {
   rows: TableCell[][];
   columnCount: number;
 }
+
 export interface BlockquoteBlock {
   type: 'blockquote';
   blocks: Block[];
 }
+
 export interface CodeBlock {
   type: 'code';
   lang: string;
   text: string;
 }
+
 export interface HrBlock {
   type: 'hr';
 }
