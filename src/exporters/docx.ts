@@ -5,6 +5,7 @@ import {
   ExternalHyperlink,
   Footer,
   HeadingLevel,
+  ImageRun,
   LevelFormat,
   LineRuleType,
   Packer,
@@ -25,6 +26,8 @@ import { computeColumnWidths, roundToTotal } from '../core/columns';
 import { PAGE_TWIPS, pageGeometry, tableFontSize, themeFor } from '../core/settings';
 import type { Settings, Theme } from '../core/settings';
 import type { Align, Block, ListBlock, ParsedDocument, Run, TableBlock } from '../core/types';
+import { renderMathToPng } from './pdfMath';
+import type { RenderedMath } from './pdfMath';
 
 const HEADINGS = [
   HeadingLevel.HEADING_1,
@@ -43,6 +46,7 @@ interface Ctx {
   contentTw: number;
   numbering: { reference: string; levels: ILevelsOptions[] }[];
   listCounter: number;
+  math: WeakMap<Run, RenderedMath>;
 }
 
 const tw = (pt: number) => Math.round(pt * 20);
@@ -58,9 +62,12 @@ export async function buildDocx(doc: ParsedDocument, s: Settings): Promise<Uint8
     contentTw: tw(geo.contentWidthPt),
     numbering: [{ reference: 'bullets', levels: levels('bullet', 0, 1) }],
     listCounter: 0,
+    math: new WeakMap(),
   };
 
   const children: (Paragraph | Table)[] = [];
+
+  await prepareMath(doc.blocks, ctx);
 
   // The filename is metadata, not document content.
   for (const b of doc.blocks) {
@@ -203,6 +210,15 @@ interface RunBase {
   color?: string;
 }
 
+function dataUrlBytes(dataUrl: string): Uint8Array {
+  const comma = dataUrl.indexOf(',');
+  if (comma < 0) throw new Error('Formula image has an invalid data URL.');
+  const binary = atob(dataUrl.slice(comma + 1));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
 function toChildren(runs: Run[], ctx: Ctx, base: RunBase = {}): ParagraphChild[] {
   const out: ParagraphChild[] = [];
   for (const r of runs) {
@@ -211,6 +227,22 @@ function toChildren(runs: Run[], ctx: Ctx, base: RunBase = {}): ParagraphChild[]
       continue;
     }
     if (r.text === '') continue;
+    if (r.math) {
+      const rendered = ctx.math.get(r);
+      if (rendered) {
+        out.push(
+          new ImageRun({
+            data: dataUrlBytes(rendered.dataUrl),
+            type: 'png',
+            transformation: {
+              width: Math.max(1, Math.round(rendered.width)),
+              height: Math.max(1, Math.round(rendered.height)),
+            },
+          }),
+        );
+        continue;
+      }
+    }
     const opts = {
       text: r.text,
       bold: r.bold || base.bold || undefined,
@@ -236,6 +268,52 @@ function toChildren(runs: Run[], ctx: Ctx, base: RunBase = {}): ParagraphChild[]
     } else out.push(new TextRun(opts));
   }
   return out;
+}
+
+async function prepareMath(blocks: Block[], ctx: Ctx): Promise<void> {
+  for (const block of blocks) {
+    if (block.type === 'heading' || block.type === 'paragraph') {
+      await prepareRuns(block.runs, ctx);
+    } else if (block.type === 'list') {
+      for (const item of block.items) {
+        await prepareRuns(item.runs, ctx);
+        await prepareMath(item.children, ctx);
+      }
+    } else if (block.type === 'blockquote') {
+      await prepareMath(block.blocks, ctx);
+    } else if (block.type === 'table') {
+      for (const cell of [...block.header, ...block.rows.flat()]) {
+        await prepareRuns(cell.runs, ctx);
+      }
+    }
+  }
+}
+
+async function prepareRuns(runs: Run[], ctx: Ctx): Promise<void> {
+  await Promise.all(
+    runs.map(async (run) => {
+      if (!run.math || !run.text.trim()) return;
+
+      try {
+        ctx.math.set(
+          run,
+          await renderMathToPng(
+            run.text,
+            Boolean(run.displayMath),
+            ctx.s.fontSize * (4 / 3),
+            `#${ctx.theme.bodyColor}`,
+            `#${ctx.theme.pageFill}`,
+          ),
+        );
+      } catch (error) {
+        console.error('Docraft: unable to render a math expression for Word export.', {
+          formula: run.text,
+          displayMath: run.displayMath,
+          error,
+        });
+      }
+    }),
+  );
 }
 
 function renderBlock(b: Block, ctx: Ctx, listDepth: number, quoteDepth: number): (Paragraph | Table)[] {

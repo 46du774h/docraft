@@ -273,16 +273,8 @@ function inline(runs: Run[], ctx: Ctx, base: InlineBase = {}): any[] {
     }
 
     if (run.math) {
-      const image = mathImage(run, ctx);
-
-      if (image) {
-        // Inline equations share the text array with the surrounding text.
-        out.push(image);
-      } else if (run.text) {
-        // Fallback to the original LaTeX if rendering failed.
-        out.push({ text: run.text, font: 'Mono' });
-      }
-
+      // Images are not valid entries in pdfmake's text arrays. Formula
+      // images are emitted by inlineNodes as separate PDF nodes instead.
       continue;
     }
 
@@ -358,6 +350,53 @@ function inline(runs: Run[], ctx: Ctx, base: InlineBase = {}): any[] {
   return out.length ? out : [{ text: ' ' }];
 }
 
+function inlineNodes(
+  runs: Run[],
+  ctx: Ctx,
+  base: InlineBase = {},
+): any[] {
+  const nodes: any[] = [];
+  let textRuns: Run[] = [];
+
+  const flushText = () => {
+    if (textRuns.length === 0) return;
+
+    nodes.push({
+      text: inline(textRuns, ctx, base),
+      alignment: 'left',
+    });
+    textRuns = [];
+  };
+
+  for (const run of runs) {
+    if (!run.math) {
+      textRuns.push(run);
+      continue;
+    }
+
+    flushText();
+
+    const image = mathImage(run, ctx);
+
+    if (image) {
+      nodes.push({
+        ...image,
+        alignment: run.displayMath ? 'center' : 'left',
+        margin: run.displayMath ? [0, 6, 0, 8] : [0, 2, 0, 2],
+      });
+    } else if (run.text) {
+      nodes.push({
+        text: run.text,
+        font: 'Mono',
+        alignment: run.displayMath ? 'center' : 'left',
+      });
+    }
+  }
+
+  flushText();
+  return nodes.length ? nodes : [{ text: ' ' }];
+}
+
 /* ------------------------------------------------------------------ */
 /* Paragraphs and display equations                                    */
 /* ------------------------------------------------------------------ */
@@ -400,7 +439,7 @@ function renderTextBlock(
   };
 
   for (const run of runs) {
-    if (run.math && run.displayMath) {
+    if (run.math) {
       flushText();
 
       const image = mathImage(run, ctx, options.maxWidth);
@@ -408,15 +447,15 @@ function renderTextBlock(
       if (image) {
         result.push({
           ...image,
-          alignment: 'center',
-          margin: [0, 6, 0, 8],
+          alignment: run.displayMath ? 'center' : 'left',
+          margin: run.displayMath ? [0, 6, 0, 8] : [0, 2, 0, 2],
         });
       } else if (run.text) {
         result.push({
           text: run.text,
           font: 'Mono',
-          alignment: 'center',
-          margin: [0, 6, 0, 8],
+          alignment: run.displayMath ? 'center' : 'left',
+          margin: run.displayMath ? [0, 6, 0, 8] : [0, 2, 0, 2],
         });
       }
 
@@ -603,6 +642,48 @@ function renderList(
   width: number,
   depth: number,
 ): any {
+  if (list.items.some((item) => item.runs.some((run) => run.math))) {
+    const items = list.items.flatMap((item, index) => {
+      const marker = list.ordered
+        ? `${list.start + index}.`
+        : '•';
+      const children = item.children.flatMap((child) =>
+        renderBlock(child, ctx, width - 22, depth + 1),
+      );
+
+      return [
+        {
+          stack: [
+            {
+              columns: [
+                {
+                  text: marker,
+                  width: 18,
+                  margin: [depth * 18, 0, 0, 0],
+                },
+                {
+                  stack: inlineNodes(item.runs, ctx),
+                  width: '*',
+                },
+              ],
+            },
+            ...children,
+          ],
+        },
+      ];
+    });
+
+    return {
+      stack: items,
+      margin: [
+        0,
+        0,
+        0,
+        depth === 0 ? ctx.theme.paragraphAfterPt : 2,
+      ],
+    };
+  }
+
   const items = list.items.map((item) => {
     const children = item.children.flatMap((child) =>
       renderBlock(child, ctx, width - 22, depth + 1),
@@ -616,6 +697,13 @@ function renderList(
       : [];
 
     if (children.length === 0) {
+      if (item.runs.some((run) => run.math)) {
+        return {
+          stack: inlineNodes(item.runs, ctx),
+          margin: [0, 0, 0, 2],
+        };
+      }
+
       return {
         text: inline(item.runs, ctx),
         margin: [0, 0, 0, 2],
@@ -671,15 +759,27 @@ function renderTable(
 
   const align = (value: Align) => value ?? 'left';
 
-  const makeCell = (runs: Run[], column: number, isHeader: boolean) => ({
-    text: inline(runs, ctx, {
+  const makeCell = (runs: Run[], column: number, isHeader: boolean) => {
+    const base = {
       bold: isHeader,
       color: isHeader ? hex(theme.tableHeaderColor) : undefined,
       size,
-    }),
-    alignment: align(table.align[column]),
-    fontSize: size,
-  });
+    };
+
+    if (runs.some((run) => run.math)) {
+      return {
+        stack: inlineNodes(runs, ctx, base),
+        alignment: align(table.align[column]),
+        fontSize: size,
+      };
+    }
+
+    return {
+      text: inline(runs, ctx, base),
+      alignment: align(table.align[column]),
+      fontSize: size,
+    };
+  };
 
   const bodyRows = table.rows.map((row) =>
     row.map((cell, column) => makeCell(cell.runs, column, false)),

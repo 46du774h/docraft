@@ -25,12 +25,13 @@ export async function renderMathToPng(
     display: displayMode ? 'block' : 'inline-block',
     width: 'max-content',
     maxWidth: 'none',
-    padding: '4px',
+    padding: '2px',
     margin: '0',
     backgroundColor: background,
     color,
     fontSize: `${fontSize}px`,
-    lineHeight: 'normal',
+    lineHeight: '1',
+    whiteSpace: 'nowrap',
     zIndex: '2147483647',
     pointerEvents: 'none',
   });
@@ -48,7 +49,7 @@ export async function renderMathToPng(
       trust: false,
     });
 
-    await document.fonts.ready;
+    if (document.fonts) await document.fonts.ready;
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => resolve()),
     );
@@ -62,13 +63,14 @@ export async function renderMathToPng(
     const dataUrl = await toPng(host, {
       pixelRatio: 3,
       backgroundColor: background,
-      cacheBust: false,
+      cacheBust: true,
     });
 
     return {
       dataUrl,
-      width: bounds.width * 0.75,
-      height: bounds.height * 0.75,
+      // pdfmake uses points while the browser reports CSS pixels.
+      width: Math.ceil(bounds.width * 0.75),
+      height: Math.ceil(bounds.height * 0.75),
     };
   } finally {
     host.remove();

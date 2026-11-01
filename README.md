@@ -42,6 +42,7 @@ The workspace provides a larger editor, live document preview, export controls, 
 - **Popup title field** — set the document title before exporting without opening the workspace.
 - **Full workspace** — edit content, inspect a live preview, and configure document settings.
 - **Multiple formats** — export to Word, PDF, or Markdown.
+- **PDF math rendering** — KaTeX renders supported LaTeX formulas as crisp images in PDF exports.
 - **Markdown-aware parsing** — detects headings, paragraphs, lists, tables, code blocks, quotes, links, and inline formatting.
 - **Readable numbered lists** — automatically bolds lead terms such as `1. Project overview: ...`.
 - **Light and dark documents** — choose a white document or a near-black document with white text for Word and PDF output.
