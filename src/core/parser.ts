@@ -173,11 +173,12 @@ function protectMathChunk(
   const makeToken = (
     tex: string,
     displayMath: boolean,
+    doubledSlashes: boolean,
   ): string => {
     const token = `${MATH_TOKEN_PREFIX}${counter++}TOKEN`;
 
     mathMap.set(token, {
-      tex: tex.trim(),
+      tex: (doubledSlashes ? tex.replace(/\\\\/g, '\\') : tex).trim(),
       displayMath,
     });
 
@@ -189,21 +190,21 @@ function protectMathChunk(
   // Display math: \[ ... \] or \\[ ... \\]
   result = result.replace(
     /(\\\\|\\)\[([\s\S]*?)(\\\\|\\)\]/g,
-    (_match, _open: string, tex: string) =>
-      makeToken(tex, true),
+    (_match, open: string, tex: string, close: string) =>
+      makeToken(tex, true, open.length === 2 || close.length === 2),
   );
 
   // Display math: $$ ... $$
   result = result.replace(
     /\$\$([\s\S]*?)\$\$/g,
-    (_match, tex: string) => makeToken(tex, true),
+    (_match, tex: string) => makeToken(tex, true, false),
   );
 
   // Inline math: \( ... \) or \\( ... \\)
   result = result.replace(
     /(\\\\|\\)\(([\s\S]*?)(\\\\|\\)\)/g,
-    (_match, _open: string, tex: string) =>
-      makeToken(tex, false),
+    (_match, open: string, tex: string, close: string) =>
+      makeToken(tex, false, open.length === 2 || close.length === 2),
   );
 
   // Inline math: $ ... $
@@ -211,7 +212,7 @@ function protectMathChunk(
   result = result.replace(
     /(^|[^\\$])\$([^$\n]+)\$(?!\$)/g,
     (_match, prefix: string, tex: string) =>
-      `${prefix}${makeToken(tex, false)}`,
+      `${prefix}${makeToken(tex, false, false)}`,
   );
 
   return result;
