@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { AnalysisSummary } from '../ui/AnalysisSummary';
+import { BatchExportPanel } from '../ui/BatchExportPanel';
 import { ExportButtons } from '../ui/ExportButtons';
 import { InputEditor } from '../ui/InputEditor';
 import type { EditorHandle } from '../ui/InputEditor';
@@ -29,7 +30,7 @@ export function Popup() {
   };
 
   return (
-    <main className="popup-shell flex h-[400px] w-[320px] flex-col gap-2 p-2.5">
+    <main className="popup-shell flex h-[600px] w-[440px] flex-col gap-2 overflow-y-auto p-3">
       <header className="popup-header flex items-center gap-2.5">
         <LogoMark size={28} />
         <div className="min-w-0">
@@ -55,7 +56,18 @@ export function Popup() {
         />
       </label>
 
-      <div className="popup-editor min-h-0 flex-1">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-[11px] text-ink-600">
+        <label className="flex items-center gap-1.5">
+          <input type="checkbox" checked={c.settings.includeTableOfContents} onChange={(e) => c.update({ includeTableOfContents: e.target.checked })} />
+          Include table of contents
+        </label>
+        <label className="flex items-center gap-1.5">
+          <input type="checkbox" checked={c.settings.multiplePaste} onChange={(e) => c.update({ multiplePaste: e.target.checked })} />
+          Multiple pastes / ZIP
+        </label>
+      </div>
+
+      <div className="popup-editor min-h-[280px] flex-1">
         <InputEditor
           ref={editor}
           value={c.text}
@@ -72,8 +84,21 @@ export function Popup() {
 
       <div className="popup-exports flex items-center justify-between rounded-xl border border-ink-200 bg-ink-100/80 px-2 py-1.5">
         <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-ink-500">Export</span>
-        <ExportButtons compact onExport={c.exportAs} busyFormat={c.status.kind === 'busy' ? c.status.format : undefined} disabled={c.busy} />
+        <ExportButtons compact onExport={c.exportAs} busyFormat={c.status.kind === 'busy' && c.status.format !== 'zip' ? c.status.format : undefined} disabled={c.busy} />
       </div>
+
+      {c.settings.multiplePaste && (
+        <BatchExportPanel
+          compact
+          items={c.batchItems}
+          format={c.batchFormat}
+          onFormatChange={c.setBatchFormat}
+          onAdd={() => c.addCurrentToBatch(c.batchFormat)}
+          onRemove={c.removeBatchItem}
+          onExport={() => void c.exportBatch()}
+          disabled={c.busy}
+        />
+      )}
 
       <div className="popup-footer flex gap-2">
         <button type="button" className="btn-icon flex-1" onClick={preview} title="Preview in workspace" aria-label="Preview in workspace"><EyeIcon /></button>

@@ -21,6 +21,6 @@ function stamp(d: Date): string {
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
 }
 
-export function buildFilename(title: string | undefined, ext: 'docx' | 'pdf' | 'md', now = new Date()): string {
+export function buildFilename(title: string | undefined, ext: 'docx' | 'pdf' | 'html', now = new Date()): string {
   return `${safeBaseName(title, `document-${stamp(now)}`)}.${ext}`;
 }

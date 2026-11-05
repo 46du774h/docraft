@@ -14,7 +14,7 @@
   </p>
 </div>
 
-Docraft is a local-first Chrome extension that converts pasted AI responses into editable **Word (.docx)**, styled **PDF**, or clean **Markdown** files. It is designed for fast paste-and-export workflows while still offering a full workspace for detailed formatting.
+Docraft is a local-first Chrome extension that converts pasted AI responses into editable **Word (.docx)**, styled **PDF**, or standalone **HTML** files. It is designed for fast paste-and-export workflows while still offering a full workspace for detailed formatting.
 
 No server, account, AI API, analytics, or content scripts are required.
 
@@ -41,7 +41,9 @@ The workspace provides a larger editor, live document preview, export controls, 
 - **Fast compact popup** — paste and export from a small, icon-focused interface.
 - **Popup title field** — set the document title before exporting without opening the workspace.
 - **Full workspace** — edit content, inspect a live preview, and configure document settings.
-- **Multiple formats** — export to Word, PDF, or Markdown.
+- **Multiple formats** — export to Word, PDF, or HTML.
+- **Optional table of contents** — include a linked contents section in HTML or a formatted contents section in Word and PDF.
+- **Multiple-paste ZIP batches** — add responses one at a time, choose a format for each, and download the batch as a ZIP.
 - **PDF math rendering** — KaTeX renders supported LaTeX formulas as crisp images in PDF exports.
 - **Markdown-aware parsing** — detects headings, paragraphs, lists, tables, code blocks, quotes, links, and inline formatting.
 - **Readable numbered lists** — automatically bolds lead terms such as `1. Project overview: ...`.
@@ -77,7 +79,7 @@ npm run dev       # watch-build the extension
 npm run typecheck # run TypeScript checks
 npm test          # run parser, exporter, and UI tests
 npm run build     # type-check and create dist/
-npm run samples   # create sample Word, PDF, and Markdown files
+npm run samples   # create sample Word, PDF, and HTML files
 ```
 
 ## Project structure
@@ -87,7 +89,7 @@ public/            Extension manifest, icons, branding, and bundled fonts
 popup.html         Compact popup entry point
 workspace.html     Full workspace entry point
 src/core/          Parser, document types, settings, filenames, and safety helpers
-src/exporters/     Word, PDF, Markdown, font loading, and download logic
+src/exporters/     Word, PDF, HTML, font loading, and download logic
 src/ui/            Editor, toolbar, preview, settings, status, and export controls
 src/popup/         Popup React entry point
 src/workspace/     Workspace React entry point
@@ -103,6 +105,7 @@ tests/             Parser, exporter, and UI tests
 - Pasted content is not saved by default.
 - The optional **Remember my draft** setting stores text unencrypted in `chrome.storage.local`.
 - Popup-to-workspace handoff uses temporary session storage and is deleted after it is read.
+- In-progress ZIP batches use temporary session storage so they survive closing the popup, and are cleared after export or when the browser session ends.
 - Pasted HTML is treated as literal text; it is never rendered with `innerHTML`.
 - Only validated `http`, `https`, `mailto`, and `tel` links become active.
 
@@ -113,7 +116,7 @@ tests/             Parser, exporter, and UI tests
 - Calibri PDF output uses bundled Carlito because Microsoft Calibri cannot be redistributed by the extension.
 - Preview page breaks are estimates.
 - Landscape mode is manual; wide tables are scaled using smaller type and tighter padding.
-- Dark appearance is intended for on-screen reading and dark PDFs. Markdown preserves source formatting rather than applying document theme colors.
+- Dark appearance is intended for on-screen reading and dark PDFs.
 
 ## License
 

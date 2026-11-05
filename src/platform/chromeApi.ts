@@ -12,7 +12,7 @@ import type { Settings } from '../core/settings';
 const hasStorage = typeof chrome !== 'undefined' && !!chrome.storage?.local;
 const mem = new Map<string, unknown>();
 
-const KEYS = { settings: 'settings', draft: 'draft', handoff: 'handoff' } as const;
+const KEYS = { settings: 'settings', draft: 'draft', handoff: 'handoff', batch: 'batch' } as const;
 
 async function getLocal<T>(key: string): Promise<T | undefined> {
   if (!hasStorage) return mem.get(key) as T | undefined;
@@ -87,6 +87,26 @@ export async function takeHandoff(): Promise<string | null> {
     return typeof v === 'string' ? v : null;
   } catch {
     return null;
+  }
+}
+
+/** Keeps an in-progress multi-paste batch available when the popup closes, without writing it to disk. */
+export async function loadBatch(): Promise<unknown> {
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage?.session) {
+      const r = await chrome.storage.session.get(KEYS.batch);
+      return r[KEYS.batch];
+    }
+    return mem.get(KEYS.batch);
+  } catch {
+    return undefined;
+  }
+}
+export async function saveBatch(batch: unknown): Promise<void> {
+  if (typeof chrome !== 'undefined' && chrome.storage?.session) {
+    await chrome.storage.session.set({ [KEYS.batch]: batch });
+  } else {
+    mem.set(KEYS.batch, batch);
   }
 }
 

@@ -11,7 +11,7 @@ import { safeUrl } from '../src/core/url';
 import type { TableBlock } from '../src/core/types';
 
 const fontLoader = async (f: string) => readFileSync(new URL(`../public/fonts/${f}`, import.meta.url)).toString('base64');
-const run = (fmt: 'docx' | 'pdf' | 'md', src: string, s: Settings = DEFAULT_SETTINGS) => generate(fmt, parseDocument(src), s, fontLoader, new Date(2026, 9, 24, 9, 5));
+const run = (fmt: 'docx' | 'pdf' | 'html', src: string, s: Settings = DEFAULT_SETTINGS) => generate(fmt, parseDocument(src), s, fontLoader, new Date(2026, 9, 24, 9, 5));
 const text = (u8: Uint8Array) => new TextDecoder().decode(u8);
 const docXml = async (u8: Uint8Array) => (await JSZip.loadAsync(u8)).file('word/document.xml')!.async('string');
 
@@ -54,6 +54,23 @@ describe('Word (.docx)', () => {
     const xml = await docXml((await run('docx', '# Dark report\n\nReadable text.', { ...DEFAULT_SETTINGS, documentTheme: 'dark' })).data);
     expect(xml).toContain('w:background');
     expect(xml).toContain('w:color="1E1E1E"');
+  });
+
+  it('creates a PDF with the optional contents section enabled', async () => {
+    const r = await run('pdf', '# First\n\n## Second', { ...DEFAULT_SETTINGS, includeTableOfContents: true });
+    const pdf = Buffer.from(r.data).toString('latin1');
+    expect(pdf.startsWith('%PDF-')).toBe(true);
+    expect(r.data.length).toBeGreaterThan(500);
+    expect(pdf.match(/\/Type\s*\/Page[^s]/g)).toHaveLength(2);
+  });
+
+  it('includes an optional contents section before the document', async () => {
+    const xml = await docXml((await run('docx', '# First\n\n## Second', { ...DEFAULT_SETTINGS, includeTableOfContents: true })).data);
+    expect(xml.indexOf('Table of Contents')).toBeLessThan(xml.indexOf('First'));
+    expect(xml).toContain('Second');
+    expect(xml).toContain('TOC');
+    expect(xml).toContain('w:leader="dot"');
+    expect(xml).toContain('<w:br w:type="page"/>');
   });
 
   it('wide tables and long text are written in full', async () => {
@@ -119,45 +136,43 @@ describe('PDF', () => {
   });
 });
 
-describe('Markdown (.md)', () => {
-  it('keeps structure, wording, tables, fences and links', async () => {
-    const src = '# T\r\n\r\nSome **text** with [a link](https://e.com).\r\n\r\n| a | b |\r\n|---|---|\r\n| 1 | |\r\n\r\n```python\r\nprint(1)\r\n```\r\n\r\n---\r\n\r\n> quote\r\n\r\n- x\r\n  - y\r\n';
-    const r = await run('md', src);
+describe('HTML (.html)', () => {
+  it('exports styled semantic HTML with headings, tables, code and safe links', async () => {
+    const src = '# Report\n\nSome **text** with [a link](https://e.com).\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n```js\nprint(1)\n```';
+    const r = await run('html', src);
     const out = text(r.data);
-    expect(r.filename).toBe('T.md');
-    expect(out).not.toContain('\r');
-    expect(out).toBe(src.replace(/\r\n/g, '\n'));
-    expect(out.endsWith('\n') && !out.endsWith('\n\n')).toBe(true);
+    expect(r.filename).toBe('Report.html');
+    expect(r.mime).toBe('text/html;charset=utf-8');
+    expect(out).toContain('<h1 id="report">Report</h1>');
+    expect(out).toContain('<table>');
+    expect(out).toContain('<pre><code class="language-js">');
+    expect(out).toContain('href="https://e.com"');
   });
 
-  it('converts copied tab-separated tables to valid pipe tables', async () => {
-    const out = text((await run('md', 'Intro\n\nA\tB\n1\t2\n')).data);
-    expect(out).toContain('| A | B |\n| --- | --- |\n| 1 | 2 |');
+  it('adds a linked optional table of contents and safely escapes raw HTML', async () => {
+    const src = '# Repeated\n\n## Repeated\n\n<script>alert(1)</script>\n\n[bad](javascript:alert(1))';
+    const out = text((await run('html', src, { ...DEFAULT_SETTINGS, includeTableOfContents: true })).data);
+    expect(out).toContain('<nav class="table-of-contents"');
+    expect(out).toContain('<a href="#repeated-2">Repeated</a>');
+    expect(out).toContain('<h2 id="repeated-2">Repeated</h2>');
+    expect(out).toContain('.document-content{break-before:page;page-break-before:always}');
+    expect(out).toContain('&lt;script&gt;');
+    expect(out).not.toContain('<script>');
+    expect(out).not.toContain('href="javascript:');
   });
 
-  it('adds empty header cells when body rows are wider, so no cell is lost', async () => {
-    const out = text((await run('md', '| a | b |\n|---|---|\n| 1 | 2 | 3 |')).data);
-    expect(out).toContain('| 3 |');
-    const reparsed = parseDocument(out);
-    expect((reparsed.blocks.find((b) => b.type === 'table') as TableBlock).columnCount).toBe(3);
-  });
-
-  it('keeps plain text and paragraph boundaries; prepends a title only when asked', async () => {
-    const out = text((await run('md', 'Line one\nline two\n\nPara two', { ...DEFAULT_SETTINGS, title: 'My Title' })).data);
-    expect(out).toBe('# My Title\n\nLine one\nline two\n\nPara two\n');
-  });
-
-  it('is UTF-8', async () => {
-    expect(text((await run('md', 'Ünïcödé — 日本語 😀')).data)).toContain('Ünïcödé — 日本語 😀');
+  it('omits the table of contents when disabled', async () => {
+    const out = text((await run('html', '# Heading')).data);
+    expect(out).not.toContain('<nav class="table-of-contents"');
   });
 });
 
 describe('export guards', () => {
   it('rejects empty input with a clear error', async () => {
-    for (const f of ['docx', 'pdf', 'md'] as const) await expect(run(f, '   \n')).rejects.toBeInstanceOf(ExportError);
+    for (const f of ['docx', 'pdf', 'html'] as const) await expect(run(f, '   \n')).rejects.toBeInstanceOf(ExportError);
   });
   it('title overrides the first heading for the file name', async () => {
-    expect((await run('md', '# Heading', { ...DEFAULT_SETTINGS, title: 'Custom: Name?' })).filename).toBe('Custom-Name.md');
+    expect((await run('html', '# Heading', { ...DEFAULT_SETTINGS, title: 'Custom: Name?' })).filename).toBe('Custom-Name.html');
   });
 });
 

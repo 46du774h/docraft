@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { AnalysisSummary } from '../ui/AnalysisSummary';
+import { BatchExportPanel } from '../ui/BatchExportPanel';
 import { DocumentPreview } from '../ui/DocumentPreview';
 import { ExportButtons } from '../ui/ExportButtons';
 import { InputEditor } from '../ui/InputEditor';
@@ -33,7 +34,7 @@ export function Workspace() {
         </div>
         <div className="ml-auto flex items-center gap-3">
           <span className="hidden text-[12px] text-ink-500 sm:inline">Download as</span>
-          <ExportButtons layout="row" onExport={c.exportAs} busyFormat={c.status.kind === 'busy' ? c.status.format : undefined} disabled={c.busy} />
+          <ExportButtons layout="row" onExport={c.exportAs} busyFormat={c.status.kind === 'busy' && c.status.format !== 'zip' ? c.status.format : undefined} disabled={c.busy} />
         </div>
       </header>
 
@@ -41,10 +42,21 @@ export function Workspace() {
         <div className="px-4 pt-3"><StatusBanner status={c.status} onDismiss={() => c.setStatus({ kind: 'idle' })} /></div>
       )}
 
-      <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(300px,1fr)_minmax(380px,1.25fr)_300px]">
-        <section className="flex min-h-[320px] min-w-0 flex-col gap-2.5" aria-label="Input">
+      <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(380px,1.1fr)_minmax(420px,1.25fr)_300px]">
+        <section className="flex min-h-[480px] min-w-0 flex-col gap-2.5" aria-label="Input">
           <Toolbar onPaste={paste} onClear={c.requestClear} confirmClear={c.confirmClear} chars={chars} words={words} hasText={c.text.trim() !== ''} />
-          <div className="min-h-0 flex-1">
+          {c.settings.multiplePaste && (
+            <BatchExportPanel
+              items={c.batchItems}
+              format={c.batchFormat}
+              onFormatChange={c.setBatchFormat}
+              onAdd={() => c.addCurrentToBatch(c.batchFormat)}
+              onRemove={c.removeBatchItem}
+              onExport={() => void c.exportBatch()}
+              disabled={c.busy}
+            />
+          )}
+          <div className="min-h-[360px] flex-1">
             <InputEditor ref={editor} value={c.text} onChange={c.setText} label="Response text" autoFocus
               placeholder={'Paste a full response here.\n\nMarkdown is detected automatically: headings, lists, tables, code blocks, quotes and links.'} />
           </div>

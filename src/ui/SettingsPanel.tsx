@@ -95,7 +95,15 @@ export function SettingsPanel({ settings: s, update, choosePreset }: Props) {
         <input type="checkbox" className="h-4 w-4 rounded border-ink-300" checked={s.pageNumbers} onChange={(e) => update({ pageNumbers: e.target.checked })} />
         Page numbers
       </label>
-      <p className="-mt-2 text-[11.5px] text-ink-500">Font, size, page and margin options apply to Word and PDF. Markdown keeps structure only.</p>
+      <label className="flex items-center gap-2 text-[13px]">
+        <input type="checkbox" className="h-4 w-4 rounded border-ink-300" checked={s.includeTableOfContents} onChange={(e) => update({ includeTableOfContents: e.target.checked })} />
+        Include a table of contents
+      </label>
+      <label className="flex items-center gap-2 text-[13px]">
+        <input type="checkbox" className="h-4 w-4 rounded border-ink-300" checked={s.multiplePaste} onChange={(e) => update({ multiplePaste: e.target.checked })} />
+        Enable multiple pastes and ZIP export
+      </label>
+      <p className="-mt-2 text-[11.5px] text-ink-500">Font, size, page and margin options apply to Word and PDF.</p>
 
       <div className="border-t border-ink-200 pt-3">
         <label className="flex items-start gap-2 text-[13px]">

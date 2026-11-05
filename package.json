@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Docraft converts pasted AI responses into polished Word, PDF and Markdown files — fully local.",
+  "description": "Docraft converts pasted AI responses into polished Word, PDF and HTML files — fully local.",
   "scripts": {
     "dev": "vite build --watch",
     "build": "tsc --noEmit && vite build",
@@ -14,6 +14,7 @@
   "dependencies": {
     "docx": "^9.14.0",
     "html-to-image": "^1.11.13",
+    "jszip": "^3.10.2",
     "katex": "^0.19.1",
     "markdown-it": "^15.0.3",
     "pdfmake": "^0.2.23",

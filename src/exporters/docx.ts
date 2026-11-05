@@ -7,8 +7,10 @@ import {
   HeadingLevel,
   ImageRun,
   LevelFormat,
+  LeaderType,
   LineRuleType,
   Packer,
+  PageBreak,
   PageNumber,
   PageOrientation,
   Paragraph,
@@ -18,11 +20,13 @@ import {
   TableLayoutType,
   TableRow,
   TextRun,
+  TableOfContents,
   UnderlineType,
   WidthType,
 } from 'docx';
 import type { ILevelsOptions, ParagraphChild } from 'docx';
 import { computeColumnWidths, roundToTotal } from '../core/columns';
+import { extractHeadings } from '../core/headings';
 import { PAGE_TWIPS, pageGeometry, tableFontSize, themeFor } from '../core/settings';
 import type { Settings, Theme } from '../core/settings';
 import type { Align, Block, ListBlock, ParsedDocument, Run, TableBlock } from '../core/types';
@@ -65,9 +69,27 @@ export async function buildDocx(doc: ParsedDocument, s: Settings): Promise<Uint8
     math: new WeakMap(),
   };
 
-  const children: (Paragraph | Table)[] = [];
+  const children: (Paragraph | Table | TableOfContents)[] = [];
+  const hasTableOfContents = s.includeTableOfContents && extractHeadings(doc.blocks).length > 0;
+  const pageNumbers = hasTableOfContents
+    ? (await import('docx/layout')).estimatePageNumbers
+    : undefined;
 
   await prepareMath(doc.blocks, ctx);
+
+  if (hasTableOfContents) {
+    children.push(new Paragraph({
+      children: [new TextRun({ text: 'Table of Contents', bold: true, size: hp(s.fontSize * 1.4), color: theme.headingColor })],
+      spacing: { before: tw(4), after: tw(10) },
+      keepNext: true,
+    }));
+    children.push(new TableOfContents('Table of Contents', {
+      headingStyleRange: '1-6',
+      hyperlink: true,
+      tabLeader: LeaderType.DOT,
+    }));
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+  }
 
   // The filename is metadata, not document content.
   for (const b of doc.blocks) {
@@ -96,6 +118,8 @@ export async function buildDocx(doc: ParsedDocument, s: Settings): Promise<Uint8
     title: s.title.trim() || doc.title || 'Document',
     description: 'Generated locally by Docraft',
     background: { color: theme.pageFill },
+    pageNumbers,
+    features: { updateFields: true },
     styles: {
       default: {
         document: {

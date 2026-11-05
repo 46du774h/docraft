@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import JSZip from 'jszip';
 import { Popup } from '../src/popup/Popup';
 import { Workspace } from '../src/workspace/Workspace';
 
@@ -20,19 +21,19 @@ const type = (v: string) => fireEvent.change(screen.getByLabelText('Response tex
 describe('popup', () => {
   it('shows validation for empty input and does not download', async () => {
     render(<Popup />);
-    fireEvent.click(await screen.findByRole('button', { name: /Markdown/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /HTML/ }));
     expect((await screen.findByRole('alert')).textContent).toMatch(/Paste a response/i);
     expect(created).toHaveLength(0);
   });
 
-  it('counts words and exports Markdown and Word as real files', async () => {
+  it('counts words and exports HTML and Word as real files', async () => {
     render(<Popup />);
     type(MD);
     expect(screen.getByText(/words?, .* characters?/).textContent).toContain('13 words');
-    fireEvent.click(screen.getByRole('button', { name: /Markdown/ }));
+    fireEvent.click(screen.getByRole('button', { name: /HTML/ }));
     await waitFor(() => expect(created).toHaveLength(1));
-    expect(await created[0].text()).toBe(MD + '\n');
-    await screen.findByText(/Markdown file saved as Title\.md/);
+    expect(await created[0].text()).toContain('<h1 id="title">Title</h1>');
+    await screen.findByText(/HTML file saved as Title\.html/);
     fireEvent.click(screen.getByRole('button', { name: /Word/ }));
     await waitFor(() => expect(created).toHaveLength(2), { timeout: 15000 });
     expect(created[1].size).toBeGreaterThan(1000);
@@ -66,5 +67,27 @@ describe('workspace', () => {
     await waitFor(() => expect(container.querySelectorAll('table tr')).toHaveLength(2));
     fireEvent.click(screen.getByRole('radio', { name: 'Academic' }));
     expect((screen.getByLabelText('Font') as HTMLSelectElement).value).toBe('Times New Roman');
+  });
+
+  it('adds multiple pastes with individual formats and downloads them in a ZIP', async () => {
+    const view = render(<Workspace />);
+    const multiplePastes = await screen.findByLabelText('Enable multiple pastes and ZIP export');
+    if (!(multiplePastes as HTMLInputElement).checked) fireEvent.click(multiplePastes);
+    type('# First');
+    fireEvent.change(screen.getByLabelText('Format for next paste'), { target: { value: 'html' } });
+    fireEvent.click(screen.getByRole('button', { name: /Add current paste/ }));
+    await waitFor(() => expect((screen.getByLabelText('Response text') as HTMLTextAreaElement).value).toBe(''));
+    await screen.findByText('1. First');
+    view.unmount();
+    render(<Workspace />);
+    await screen.findByText('1. First');
+    type('# Second');
+    fireEvent.change(screen.getByLabelText('Format for next paste'), { target: { value: 'docx' } });
+    fireEvent.click(screen.getByRole('button', { name: /Add current paste/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Export 2 documents as ZIP/ }));
+    await waitFor(() => expect(created).toHaveLength(1), { timeout: 15000 });
+    const zip = await JSZip.loadAsync(await created[0].arrayBuffer());
+    expect(Object.keys(zip.files).filter((name) => !zip.files[name].dir).sort()).toEqual(['First.html', 'Second.docx']);
+    expect((await screen.findByRole('status')).textContent).toContain('2 documents saved');
   });
 });

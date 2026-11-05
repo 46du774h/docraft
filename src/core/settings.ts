@@ -17,6 +17,8 @@ export interface Settings {
   documentTheme: DocumentThemeId;
   title: string;
   pageNumbers: boolean;
+  includeTableOfContents: boolean;
+  multiplePaste: boolean;
   /** Opt-in: keep the pasted text in chrome.storage.local so it survives closing the popup. */
   rememberDraft: boolean;
 }
@@ -145,6 +147,8 @@ export const DEFAULT_SETTINGS: Settings = {
   documentTheme: 'light',
   title: '',
   pageNumbers: true,
+  includeTableOfContents: false,
+  multiplePaste: false,
   rememberDraft: false,
 };
 
@@ -192,6 +196,8 @@ export function sanitizeSettings(raw: unknown): Settings {
     documentTheme: pick(r.documentTheme, ['light', 'dark'] as const, d.documentTheme),
     title: typeof r.title === 'string' ? r.title.slice(0, 200) : '',
     pageNumbers: typeof r.pageNumbers === 'boolean' ? r.pageNumbers : d.pageNumbers,
+    includeTableOfContents: typeof r.includeTableOfContents === 'boolean' ? r.includeTableOfContents : d.includeTableOfContents,
+    multiplePaste: typeof r.multiplePaste === 'boolean' ? r.multiplePaste : d.multiplePaste,
     rememberDraft: typeof r.rememberDraft === 'boolean' ? r.rememberDraft : d.rememberDraft,
   };
 }

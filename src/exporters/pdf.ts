@@ -1,5 +1,6 @@
 
 import { computeColumnWidths } from '../core/columns';
+import { extractHeadings } from '../core/headings';
 import { pageGeometry, pdfFontGroup, tableFontSize, themeFor } from '../core/settings';
 import type { Settings, Theme } from '../core/settings';
 import type { Align, Block, ListBlock, ParsedDocument, Run, TableBlock } from '../core/types';
@@ -85,10 +86,38 @@ export async function buildPdf(
   await prepareMath(doc.blocks, ctx);
 
   const content: any[] = [];
+  const tocHeadings = s.includeTableOfContents ? extractHeadings(doc.blocks) : [];
+
+  if (tocHeadings.length > 0) {
+    content.push({
+      toc: {
+        title: {
+          text: 'Table of Contents',
+          fontSize: s.fontSize * 1.4,
+          bold: true,
+          color: hex(theme.headingColor),
+          margin: [0, 0, 0, 10],
+        },
+        textStyle: { fontSize: s.fontSize, color: hex(theme.bodyColor) },
+        numberStyle: { fontSize: s.fontSize, color: hex(theme.bodyColor) },
+        textMargin: [0, 0, 0, 4],
+      },
+    });
+  }
 
   // Do not insert the filename into the exported document body.
+  let firstBodyNode = tocHeadings.length > 0;
   for (const block of doc.blocks) {
-    content.push(...renderBlock(block, ctx, geo.contentWidthPt));
+    const nodes = renderBlock(block, ctx, geo.contentWidthPt);
+    if (firstBodyNode && nodes.length > 0) {
+      nodes[0].pageBreak = 'before';
+      firstBodyNode = false;
+    }
+    if (tocHeadings.length > 0 && block.type === 'heading' && nodes.length > 0) {
+      nodes[0].tocItem = 'docraft';
+      nodes[0].tocMargin = [(block.level - 1) * 12, 0, 0, 4];
+    }
+    content.push(...nodes);
   }
 
   if (content.length === 0) content.push({ text: ' ' });

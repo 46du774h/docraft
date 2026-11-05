@@ -4,7 +4,7 @@ import { FileIcon, Spinner } from './icons';
 const OPTIONS: { format: ExportFormat; label: string; ext: string }[] = [
   { format: 'docx', label: 'Word', ext: '.docx' },
   { format: 'pdf', label: 'PDF', ext: '.pdf' },
-  { format: 'md', label: 'Markdown', ext: '.md' },
+  { format: 'html', label: 'HTML', ext: '.html' },
 ];
 
 interface Props {

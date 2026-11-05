@@ -18,7 +18,7 @@ const variants: [string, Settings][] = [
 ];
 for (const [name, s] of variants) {
   const doc = parseDocument(sample);
-  for (const f of ['docx', 'pdf', 'md'] as ExportFormat[]) {
+  for (const f of ['docx', 'pdf', 'html'] as ExportFormat[]) {
     const r = await generate(f, doc, s, fontLoader);
     writeFileSync(join(out, `${name}.${f}`), r.data);
     console.log(name, r.filename, r.data.length, r.notes.join(' | '));

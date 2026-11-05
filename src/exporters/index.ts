@@ -3,12 +3,12 @@ import type { Settings } from '../core/settings';
 import type { ParsedDocument } from '../core/types';
 import type { FontLoader } from './fontLoader';
 
-export type ExportFormat = 'docx' | 'pdf' | 'md';
+export type ExportFormat = 'docx' | 'pdf' | 'html';
 
 export const MIME: Record<ExportFormat, string> = {
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   pdf: 'application/pdf',
-  md: 'text/markdown;charset=utf-8',
+  html: 'text/html;charset=utf-8',
 };
 
 export interface ExportResult {
@@ -76,7 +76,7 @@ export async function generate(
       notes.push(
         `${res.unsupportedChars.length} character${
           res.unsupportedChars.length === 1 ? '' : 's'
-        } (${sample}) can't be drawn with the PDF fonts and may appear blank. Word and Markdown keep them.`,
+        } (${sample}) can't be drawn with the PDF fonts and may appear blank. Word and HTML keep them.`,
       );
     }
 
@@ -89,13 +89,13 @@ export async function generate(
     };
   }
 
-  const { buildMarkdown } = await import('./markdown');
+  const { buildHtml } = await import('./html');
 
   return {
     format,
     filename,
-    data: new TextEncoder().encode(buildMarkdown(doc, settings)),
-    mime: MIME.md,
+    data: new TextEncoder().encode(buildHtml(doc, settings)),
+    mime: MIME.html,
     notes,
   };
 }

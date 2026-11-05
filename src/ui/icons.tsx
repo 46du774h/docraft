@@ -29,7 +29,7 @@ export function LogoMark({ size = 28 }: { size?: number }) {
 const FILE_META: Record<ExportFormat, { color: string; mark: string }> = {
   docx: { color: '#2B579A', mark: 'W' },
   pdf: { color: '#D93025', mark: 'PDF' },
-  md: { color: '#475569', mark: 'M↓' },
+  html: { color: '#E34F26', mark: 'HTML' },
 };
 
 /** Small file-type badge (page with a folded corner and a format mark). */
