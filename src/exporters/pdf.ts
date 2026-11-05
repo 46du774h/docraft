@@ -91,6 +91,7 @@ export async function buildPdf(
   if (tocHeadings.length > 0) {
     content.push({
       toc: {
+        id: 'docraft',
         title: {
           text: 'Table of Contents',
           fontSize: s.fontSize * 1.4,
